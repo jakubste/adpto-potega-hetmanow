@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <stack>
 
 using namespace std;
 
@@ -20,6 +21,7 @@ struct Move {
 struct state {
     vector<Move> moves;
     Move previous_move;
+    bool start = false;
 };
 
 
@@ -84,17 +86,73 @@ void printMoves(vector<Move> moves) {
     }
 }
 
+void makeMove(Move move) {
+    board[move.x1][move.y1] = 0;
+    board[move.x2][move.y2] *= 2;
+}
+
 int main() {
 
     cin >> SIZE >> K;
 
+    int n = 0;
+
     for (int i = 0; i < SIZE; i++) {
         for (int j = 0; j < SIZE; j++) {
             cin >> board[i][j];
+            if (board[i][j] != 0) {
+                n++;
+            }
         }
     }
 
-    vector<Move> moves = find_possible_moves();
-    printMoves(moves);
+    state start_state;
+    start_state.moves = find_possible_moves();
+    start_state.start = true;
+
+    stack<state> game;
+    game.push(start_state);
+
+    Move temp_move;
+
+    while (true) {
+        state current_state = game.top();
+
+        if (current_state.moves.empty())
+            break;
+        temp_move = current_state.moves.back();
+
+        state new_state;
+        new_state.previous_move = temp_move;
+        makeMove(temp_move);
+        n--;
+        new_state.moves = find_possible_moves();
+        game.push(new_state);
+
+    }
+
+    
+
+
+    //  DEBUG PRINTING
+
+    cout << n << endl;
+
+    vector<Move> game_moves;
+
+    while (!game.empty()) {
+        game_moves.push_back(game.top().previous_move);
+        game.pop();
+    }
+
+    printMoves(game_moves);
+
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
+            cout << board[i][j] << " ";
+        }
+        cout << endl;
+    }
+
 
 }
