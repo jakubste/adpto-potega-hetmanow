@@ -37,6 +37,8 @@ vector<Move> find_possible_moves() {
                     if (board[i][k] == curr) {
                         Move temp_move(i, j, i, k);
                         moves.push_back(temp_move);
+                        temp_move = Move(i, k, i, j);
+                        moves.push_back(temp_move);
                         break;
                     } else if (board[i][k] != 0) {
                         break;
@@ -46,6 +48,8 @@ vector<Move> find_possible_moves() {
                 for (int k = i + 1; k < SIZE; k++) {
                     if (board[k][j] == curr) {
                         Move temp_move(i, j, k, j);
+                        moves.push_back(temp_move);
+                        temp_move = Move(k, j, i, j);
                         moves.push_back(temp_move);
                         break;
                     } else if (board[k][j] != 0) {
@@ -57,6 +61,8 @@ vector<Move> find_possible_moves() {
                     if (board[i + k][j + k] == curr) {
                         Move temp_move(i, j, i + k, j + k);
                         moves.push_back(temp_move);
+                        temp_move = Move(i + k, j + k, i, j);
+                        moves.push_back(temp_move);
                         break;
                     } else if (board[i + k][j + k] != 0) {
                         break;
@@ -66,6 +72,8 @@ vector<Move> find_possible_moves() {
                 for (int k = 1; i + k < SIZE && j - k >= 0; k++) {
                     if (board[i + k][j - k] == curr) {
                         Move temp_move(i, j, i + k, j - k);
+                        moves.push_back(temp_move);
+                        temp_move = Move(i + k, j - k, i, j);
                         moves.push_back(temp_move);
                         break;
                     } else if (board[i + k][j - k] != 0) {
@@ -78,17 +86,34 @@ vector<Move> find_possible_moves() {
     return moves;
 }
 
+void printMove(Move move) {
+    cout << move.x1 << " " << move.y1 << " " << move.x2 << " " << move.y2 << " " << endl;
+}
+
 void printMoves(vector<Move> moves) {
     Move move;
     for (int i = 0; i < moves.size(); i++) {
-        move = moves[i];
-        cout << move.x1 << " " << move.y1 << " " << move.x2 << " " << move.y2 << " " << endl;
+        printMove(moves[i]);
+    }
+}
+
+void printBoard() {
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
+            cout << board[i][j] << " ";
+        }
+        cout << endl;
     }
 }
 
 void makeMove(Move move) {
     board[move.x1][move.y1] = 0;
     board[move.x2][move.y2] *= 2;
+}
+
+void undoMove(Move move) {
+    board[move.x2][move.y2] /= 2;
+    board[move.x1][move.y1] = board[move.x2][move.y2];
 }
 
 int main() {
@@ -115,23 +140,62 @@ int main() {
 
     Move temp_move;
 
+    /*
+     * TODO:
+     * * board without possible moves
+     *
+     */
+
+    char z;
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-noreturn"
     while (true) {
         state current_state = game.top();
+        game.pop();
 
-        if (current_state.moves.empty())
-            break;
+        cin >> z;
+
+        cout << game.size() << " " << current_state.moves.size() << endl;
+
+        if (current_state.moves.empty()) {
+            undoMove(current_state.previous_move);
+
+            cout << "=========================" << endl;
+            printMove(current_state.previous_move);
+            cout << "=========================" << endl;
+            printBoard();
+            cout << "=========================" << endl;
+
+            n++;
+            continue;
+        }
+
         temp_move = current_state.moves.back();
+        current_state.moves.pop_back();
+        game.push(current_state);
 
         state new_state;
         new_state.previous_move = temp_move;
         makeMove(temp_move);
+
+        cout << "-----------"<< current_state.moves.size() <<"---------------" << endl;
+        printMove(temp_move);
+        cout << "--------------------------" << endl;
+        printBoard();
+        cout << "--------------------------" << endl;
+
         n--;
         new_state.moves = find_possible_moves();
         game.push(new_state);
 
-    }
+        if (n <= K)
+            break;
 
-    
+    }
+#pragma clang diagnostic pop
+
+
 
 
     //  DEBUG PRINTING
@@ -147,12 +211,6 @@ int main() {
 
     printMoves(game_moves);
 
-    for (int i = 0; i < SIZE; i++) {
-        for (int j = 0; j < SIZE; j++) {
-            cout << board[i][j] << " ";
-        }
-        cout << endl;
-    }
-
+    printBoard();
 
 }
