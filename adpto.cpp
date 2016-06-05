@@ -2,7 +2,8 @@
 #include <vector>
 #include <stack>
 
-#define DEBUG 1
+//#define DEBUG 1
+//#define DEBUG_MOVES 1
 
 using namespace std;
 
@@ -18,6 +19,14 @@ struct Move {
 
     Move(int x1, int y1, int x2, int y2) :
             x1(x1), y1(y1), x2(x2), y2(y2) { }
+
+    bool contains(int x, int y) {
+        if (x1 == x and y1 == y)
+            return true;
+        if (x2 == x and y2 == y)
+            return true;
+        return false;
+    };
 };
 
 bool operator==(Move a, Move b) {
@@ -33,6 +42,33 @@ struct state {
     Move previous_move;
     bool start = false;
 };
+
+void printMove(Move move) {
+    cout << move.x1 << " " << move.y1 << " " << move.x2 << " " << move.y2 << " " << endl;
+}
+
+void printMoves(vector<Move> moves) {
+    Move move;
+    for (int i = 0; i < moves.size(); i++) {
+        printMove(moves[i]);
+    }
+}
+
+void printMovesReverse(vector<Move> moves) {
+    Move move;
+    for (int i = moves.size() - 1; i >= 0; i--) {
+        printMove(moves[i]);
+    }
+}
+
+void printBoard() {
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
+            cout << board[i][j] << " ";
+        }
+        cout << endl;
+    }
+}
 
 
 vector<Move> find_possible_moves() {
@@ -97,12 +133,26 @@ vector<Move> find_possible_moves() {
 }
 
 vector<Move> find_possible_moves(vector<Move> moves, Move move) {
+#ifdef DEBUG_MOVES
+    cout << "-------" << endl;
+    printMoves(moves);
+#endif
+
     for (vector<Move>::iterator it = moves.begin(); it != moves.end(); it++) {
-        if (*it == move) {
+        if ((*it).contains(move.x1, move.y1)) {
+            moves.erase(it);
+            it--;
+        } else if ((*it).contains(move.x2, move.y2)) {
             moves.erase(it);
             it--;
         }
     }
+
+#ifdef DEBUG_MOVES
+    cout << "-------" << endl;
+    printMoves(moves);
+    cout << "-------" << endl;
+#endif
 
     // place that gets empty:
 
@@ -303,35 +353,13 @@ vector<Move> find_possible_moves(vector<Move> moves, Move move) {
         }
     }
 
+#ifdef DEBUG_MOVES
+    printMoves(moves);
+    cout << "-------" << endl;
+#endif
+
 
     return moves;
-}
-
-void printMove(Move move) {
-    cout << move.x1 << " " << move.y1 << " " << move.x2 << " " << move.y2 << " " << endl;
-}
-
-void printMoves(vector<Move> moves) {
-    Move move;
-    for (int i = 0; i < moves.size(); i++) {
-        printMove(moves[i]);
-    }
-}
-
-void printMovesReverse(vector<Move> moves) {
-    Move move;
-    for (int i = moves.size() - 1; i >= 0; i--) {
-        printMove(moves[i]);
-    }
-}
-
-void printBoard() {
-    for (int i = 0; i < SIZE; i++) {
-        for (int j = 0; j < SIZE; j++) {
-            cout << board[i][j] << " ";
-        }
-        cout << endl;
-    }
 }
 
 void makeMove(Move move) {
