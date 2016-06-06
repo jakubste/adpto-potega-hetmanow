@@ -1,6 +1,8 @@
 #include <iostream>
 #include <vector>
 #include <stack>
+#include <iomanip>
+#include <algorithm>
 
 //#define DEBUG 1
 //#define DEBUG_MOVES 1
@@ -40,7 +42,6 @@ bool operator==(Move a, Move b) {
 struct state {
     vector<Move> moves;
     Move previous_move;
-    bool start = false;
 };
 
 void printMove(Move move) {
@@ -62,14 +63,49 @@ void printMovesReverse(vector<Move> moves) {
 }
 
 void printBoard() {
+    cout << "    ";
     for (int i = 0; i < SIZE; i++) {
+        cout << setw(2) << i << " ";
+    }
+    cout << endl;
+    cout << "    ";
+    for (int i = 0; i < SIZE; i++) {
+        cout << "--" << " ";
+    }
+    cout << endl;
+
+    for (int i = 0; i < SIZE; i++) {
+        cout << setw(2) << i << "| ";
         for (int j = 0; j < SIZE; j++) {
-            cout << board[i][j] << " ";
+            cout << setw(2) << board[i][j] << " ";
         }
         cout << endl;
     }
 }
 
+vector<Move> delete_moves_crossing(vector<Move> moves, int x, int y) {
+    for (vector<Move>::iterator it = moves.begin(); it != moves.end(); it++) {
+        //horizontal
+        if (it->x1 == x and x == it->x2) {
+            if ((it->x1 < x and x < it->x2) or (it->x1 > x and x > it->x2)) {
+                moves.erase(it--);
+            }
+        }
+        //vertical
+        if (it->y1 == y and y == it->y2) {
+            if ((it->y1 < y and y < it->y2) or (it->y1 > y and y > it->y2)) {
+                moves.erase(it--);
+            }
+        }
+        //diagonal
+        if (abs(it->x1 - x) == abs(it->y1 - y)) {
+            if (abs(it->x2 - x) == abs(it->y2 - y)) {
+                moves.erase(it--);
+            }
+        }
+    }
+    return moves;
+}
 
 vector<Move> find_possible_moves() {
     vector<Move> moves;
@@ -132,7 +168,208 @@ vector<Move> find_possible_moves() {
     return moves;
 }
 
-vector<Move> find_possible_moves(vector<Move> moves, Move move) {
+vector<Move> find_moves_when_place_gets_empty(int x, int y) {
+    vector<Move> moves;
+
+    // horizontally
+    int l, r;
+    long long left = 0, right = 0;
+    for (l = x - 1; l >= 0; l--) {
+        if (board[l][y] != 0) {
+            left = board[l][y];
+            break;
+        }
+    }
+    for (r = x + 1; r < SIZE; r++) {
+        if (board[r][y] != 0) {
+            right = board[r][y];
+            break;
+        }
+    }
+    if (left == right and right != 0) {
+        Move temp_move(l, y, r, y);
+        moves.push_back(temp_move);
+        temp_move = Move(r, y, l, y);
+        moves.push_back(temp_move);
+    }
+
+    // vertically
+    int u, d;
+    long long up = 0, down = 0;
+    for (u = y - 1; u >= 0; u--) {
+        if (board[x][u] != 0) {
+            up = board[x][u];
+            break;
+        }
+    }
+    for (d = y + 1; d < SIZE; d++) {
+        if (board[x][d] != 0) {
+            down = board[x][d];
+            break;
+        }
+    }
+    if (up == down and down != 0) {
+        Move temp_move(x, u, x, d);
+        moves.push_back(temp_move);
+        temp_move = Move(x, d, x, u);
+        moves.push_back(temp_move);
+    }
+
+    // diag right-down
+    int a, b;
+    long long lu = 0, rd = 0;
+    for (a = 0; x - a >= 0 and y - a >= 0; a++) {
+        if (board[x - a][y - a] != 0) {
+            lu = board[x - a][y - a];
+            break;
+        }
+    }
+    for (b = 0; x + b < SIZE and y + b < SIZE; b++) {
+        if (board[x + b][y + b] != 0) {
+            lu = board[x + b][y + b];
+            break;
+        }
+    }
+    if (lu == rd and lu != 0) {
+        Move temp_move(x - a, y - a, x + b, y + b);
+        moves.push_back(temp_move);
+        temp_move = Move(x + b, y + b, x - a, y - a);
+        moves.push_back(temp_move);
+    }
+
+    // diag left-down
+    long long ld = 0, ru = 0;
+    for (a = 0; x - a >= 0 and y + a < SIZE; a++) {
+        if (board[x - a][y + a] != 0) {
+            ld = board[x - a][y + a];
+            break;
+        }
+    }
+    for (b = 0; x + b < SIZE and y - b >= 0; b++) {
+        if (board[x + b][y - b] != 0) {
+            ru = board[x + b][y - b];
+            break;
+        }
+    }
+    if (ru == ld and ld != 0) {
+        Move temp_move(x - a, y + a, x + b, y - b);
+        moves.push_back(temp_move);
+        temp_move = Move(x + b, y - b, x - a, y + a);
+        moves.push_back(temp_move);
+    }
+
+    return moves;
+
+}
+
+vector<Move> find_possible_moves_when_place_gets_new_value(int x, int y) {
+    vector<Move> moves;
+
+    long long val = board[x][y];
+
+    // horizontally
+    for (int l = x - 1; l >= 0; l--) {
+        if (board[l][y] == val) {
+            Move temp_move(l, y, x, y);
+            moves.push_back(temp_move);
+            temp_move = Move(x, y, l, y);
+            moves.push_back(temp_move);
+            break;
+        } else if (board[l][y] != 0) {
+            break;
+        }
+    }
+    for (int r = x + 1; r < SIZE; r++) {
+        if (board[r][y] == val) {
+            Move temp_move(r, y, x, y);
+            moves.push_back(temp_move);
+            temp_move = Move(x, y, r, y);
+            moves.push_back(temp_move);
+            break;
+        } else if (board[r][y] != 0) {
+            break;
+        }
+    }
+
+    // vertically
+    for (int u = y - 1; u >= 0; u--) {
+        if (board[x][u] == val) {
+            Move temp_move(x, u, x, y);
+            moves.push_back(temp_move);
+            temp_move = Move(x, y, x, u);
+            moves.push_back(temp_move);
+            break;
+        } else if (board[x][u] != 0) {
+            break;
+        }
+    }
+    for (int d = y + 1; d < SIZE; d++) {
+        if (board[x][d] == val) {
+            Move temp_move(x, d, x, y);
+            moves.push_back(temp_move);
+            temp_move = Move(x, y, x, d);
+            moves.push_back(temp_move);
+            break;
+        } else if (board[x][d] != 0) {
+            break;
+        }
+    }
+
+    // diag left-up
+    for (int a = 1; x - a >= 0 and y - a >= 0; a++) {
+        if (board[x - a][y - a] == val) {
+            Move temp_move(x - a, y - a, x, y);
+            moves.push_back(temp_move);
+            temp_move = Move(x, y, x - a, y - a);
+            moves.push_back(temp_move);
+            break;
+        } else if (board[x - a][y - a] != 0) {
+            break;
+        }
+    }
+
+    // diag left-down
+    for (int a = 1; x - a >= 0 and y + a < SIZE; a++) {
+        if (board[x - a][y + a] == val) {
+            Move temp_move(x - a, y + a, x, y);
+            moves.push_back(temp_move);
+            temp_move = Move(x, y, x - a, y + a);
+            moves.push_back(temp_move);
+            break;
+        } else if (board[x - a][y + a] != 0) {
+            break;
+        }
+    }
+
+    // diag right-up
+    for (int a = 1; x + a < SIZE and y - a >= 0; a++) {
+        if (board[x + a][y - a] == val) {
+            Move temp_move(x + a, y - a, x, y);
+            moves.push_back(temp_move);
+            temp_move = Move(x, y, x + a, y - a);
+            moves.push_back(temp_move);
+            break;
+        } else if (board[x + a][y - a] != 0) {
+            break;
+        }
+    }
+
+    // diag right-down
+    for (int a = 1; x + a < SIZE and y + a < SIZE; a++) {
+        if (board[x + a][y + a] == val) {
+            Move temp_move(x + a, y + a, x, y);
+            moves.push_back(temp_move);
+            temp_move = Move(x, y, x + a, y + a);
+            moves.push_back(temp_move);
+            break;
+        } else if (board[x + a][y + a] != 0) {
+            break;
+        }
+    }
+    return moves;
+}
+
+vector<Move> find_possible_moves(vector<Move> moves, Move move, bool reverse = false) {
 #ifdef DEBUG_MOVES
     cout << "-------" << endl;
     printMoves(moves);
@@ -154,203 +391,24 @@ vector<Move> find_possible_moves(vector<Move> moves, Move move) {
     cout << "-------" << endl;
 #endif
 
-    // place that gets empty:
+    vector<Move> new_moves;
 
-    int x1 = move.x1;
-    int y1 = move.y1;
+    if (reverse) {
+        moves = delete_moves_crossing(moves, move.x1, move.y1);
+        // places that has now new value
+        new_moves = find_possible_moves_when_place_gets_new_value(move.x1, move.y1);
+        moves.insert(moves.end(), new_moves.begin(), new_moves.end());
+        new_moves = find_possible_moves_when_place_gets_new_value(move.x2, move.y2);
+        moves.insert(moves.end(), new_moves.begin(), new_moves.end());
 
-    // horizontally
-    int l, r;
-    long long left = 0, right = 0;
-    for (l = x1 - 1; l >= 0; l--) {
-        if (board[l][y1] != 0) {
-            left = board[l][y1];
-            break;
-        }
-    }
-    for (r = x1 + 1; r < SIZE; r++) {
-        if (board[r][y1] != 0) {
-            right = board[r][y1];
-            break;
-        }
-    }
-    if (left == right and right != 0) {
-        Move temp_move(l, y1, r, y1);
-        moves.push_back(temp_move);
-        temp_move = Move(r, y1, l, y1);
-        moves.push_back(temp_move);
-    }
+    } else {
+        // place that gets empty:
+        new_moves = find_moves_when_place_gets_empty(move.x1, move.y1);
+        moves.insert(moves.end(), new_moves.begin(), new_moves.end());
 
-    // vertically
-    int u, d;
-    long long up = 0, down = 0;
-    for (u = y1 - 1; u >= 0; u--) {
-        if (board[x1][u] != 0) {
-            up = board[x1][u];
-            break;
-        }
-    }
-    for (d = y1 + 1; d < SIZE; d++) {
-        if (board[x1][d] != 0) {
-            down = board[x1][d];
-            break;
-        }
-    }
-    if (up == down and down != 0) {
-        Move temp_move(x1, u, x1, d);
-        moves.push_back(temp_move);
-        temp_move = Move(x1, d, x1, u);
-        moves.push_back(temp_move);
-    }
-
-    // diag right-down
-    int a, b;
-    long long lu = 0, rd = 0;
-    for (a = 0; x1 - a >= 0 and y1 - a >= 0; a++) {
-        if (board[x1 - a][y1 - a] != 0) {
-            lu = board[x1 - a][y1 - a];
-            break;
-        }
-    }
-    for (b = 0; x1 + b < SIZE and y1 + b < SIZE; b++) {
-        if (board[x1 + b][y1 + b] != 0) {
-            lu = board[x1 + b][y1 + b];
-            break;
-        }
-    }
-    if (lu == rd and lu != 0) {
-        Move temp_move(x1 - a, y1 - a, x1 + b, y1 + b);
-        moves.push_back(temp_move);
-        temp_move = Move(x1 + b, y1 + b, x1 - a, y1 - a);
-        moves.push_back(temp_move);
-    }
-
-    // diag left-down
-    long long ld = 0, ru = 0;
-    for (a = 0; x1 - a >= 0 and y1 + a < SIZE; a++) {
-        if (board[x1 - a][y1 + a] != 0) {
-            ld = board[x1 - a][y1 + a];
-            break;
-        }
-    }
-    for (b = 0; x1 + b < SIZE and y1 - b >= 0; b++) {
-        if (board[x1 + b][y1 - b] != 0) {
-            ru = board[x1 + b][y1 - b];
-            break;
-        }
-    }
-    if (ru == ld and ld != 0) {
-        Move temp_move(x1 - a, y1 + a, x1 + b, y1 - b);
-        moves.push_back(temp_move);
-        temp_move = Move(x1 + b, y1 - b, x1 - a, y1 + a);
-        moves.push_back(temp_move);
-    }
-
-
-    // place that has now new value
-
-    int x2 = move.x2;
-    int y2 = move.y2;
-    long long val = board[x2][y2];
-
-    // horizontally
-    for (int l = x2 - 1; l >= 0; l--) {
-        if (board[l][y2] == val) {
-            Move temp_move(l, y2, x2, y2);
-            moves.push_back(temp_move);
-            temp_move = Move(x2, y2, l, y2);
-            moves.push_back(temp_move);
-            break;
-        } else if (board[l][y2] != 0) {
-            break;
-        }
-    }
-    for (int r = x2 + 1; r < SIZE; r++) {
-        if (board[r][y2] == val) {
-            Move temp_move(r, y2, x2, y2);
-            moves.push_back(temp_move);
-            temp_move = Move(x2, y2, r, y2);
-            moves.push_back(temp_move);
-            break;
-        } else if (board[r][y2] != 0) {
-            break;
-        }
-    }
-
-    // vertically
-    for (int u = y2 - 1; u >= 0; u--) {
-        if (board[x2][u] == val) {
-            Move temp_move(x2, u, x2, y2);
-            moves.push_back(temp_move);
-            temp_move = Move(x2, y2, x2, u);
-            moves.push_back(temp_move);
-            break;
-        } else if (board[x2][u] != 0) {
-            break;
-        }
-    }
-    for (int d = y2 + 1; d < SIZE; d++) {
-        if (board[x2][d] == val) {
-            Move temp_move(x2, d, x2, y2);
-            moves.push_back(temp_move);
-            temp_move = Move(x2, y2, x2, d);
-            moves.push_back(temp_move);
-            break;
-        } else if (board[x2][d] != 0) {
-            break;
-        }
-    }
-
-    // diag left-up
-    for (int a = 1; x2 - a >= 0 and y2 - a >= 0; a++) {
-        if (board[x2 - a][y2 - a] == val) {
-            Move temp_move(x2 - a, y2 - a, x2, y2);
-            moves.push_back(temp_move);
-            temp_move = Move(x2, y2, x2 - a, y2 - a);
-            moves.push_back(temp_move);
-            break;
-        } else if (board[x2 - a][y2 - a] != 0) {
-            break;
-        }
-    }
-
-    // diag left-down
-    for (int a = 1; x2 - a >= 0 and y2 + a < SIZE; a++) {
-        if (board[x2 - a][y2 + a] == val) {
-            Move temp_move(x2 - a, y2 + a, x2, y2);
-            moves.push_back(temp_move);
-            temp_move = Move(x2, y2, x2 - a, y2 + a);
-            moves.push_back(temp_move);
-            break;
-        } else if (board[x2 - a][y2 + a] != 0) {
-            break;
-        }
-    }
-
-    // diag right-up
-    for (int a = 1; x2 + a < SIZE and y2 - a >= 0; a++) {
-        if (board[x2 + a][y2 - a] == val) {
-            Move temp_move(x2 + a, y2 - a, x2, y2);
-            moves.push_back(temp_move);
-            temp_move = Move(x2, y2, x2 + a, y2 - a);
-            moves.push_back(temp_move);
-            break;
-        } else if (board[x2 + a][y2 - a] != 0) {
-            break;
-        }
-    }
-
-    // diag right-down
-    for (int a = 1; x2 + a < SIZE and y2 + a < SIZE; a++) {
-        if (board[x2 + a][y2 + a] == val) {
-            Move temp_move(x2 + a, y2 + a, x2, y2);
-            moves.push_back(temp_move);
-            temp_move = Move(x2, y2, x2 + a, y2 + a);
-            moves.push_back(temp_move);
-            break;
-        } else if (board[x2 + a][y2 + a] != 0) {
-            break;
-        }
+        // place that has now new value
+        new_moves = find_possible_moves_when_place_gets_new_value(move.x2, move.y2);
+        moves.insert(moves.end(), new_moves.begin(), new_moves.end());
     }
 
 #ifdef DEBUG_MOVES
@@ -389,22 +447,19 @@ int main() {
 
     state start_state;
     start_state.moves = find_possible_moves();
-    start_state.start = true;
 
     stack<state> game;
     game.push(start_state);
 
     Move temp_move;
 
-    /*
-     * TODO:
-     * * board without possible moves
-     *
-     */
-
     char z;
 
     while (true) {
+#ifdef DEBUG
+        cout << "********************************* obecnie ruchów: " << game.size() << endl;
+#endif
+
         state current_state = game.top();
         game.pop();
 
@@ -414,21 +469,18 @@ int main() {
             undoMove(current_state.previous_move);
 
 #ifdef DEBUG
-            cout << "=========================" << endl;
+            cout << "=======cofam=============" << endl;
             printMove(current_state.previous_move);
             cout << "=========================" << endl;
             printBoard();
             cout << "=========================" << endl;
 #endif
 
-            state temp = game.top();
-            game.pop();
-            temp.moves = find_possible_moves();
-            game.push(temp);
-
             n++;
             continue;
         }
+
+        random_shuffle(current_state.moves.begin(), current_state.moves.end());
 
         temp_move = current_state.moves.back();
         current_state.moves.pop_back();
@@ -439,7 +491,7 @@ int main() {
         makeMove(temp_move);
 
 #ifdef DEBUG
-        cout << "-----------" << current_state.moves.size() << "---------------" << endl;
+        cout << "-----------wykonuje-------" << endl;
         printMove(temp_move);
         cout << "--------------------------" << endl;
         printBoard();
