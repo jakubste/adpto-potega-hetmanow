@@ -3,6 +3,7 @@ CFLAGS	= -std=c++11
 
 kompiluj:
 	$(CC) $(CFLAGS) adpto.cpp -o adpto
+	$(CC) $(CFLAGS) recurrency.cpp -o recurrency
 
 all: kompiluj
 

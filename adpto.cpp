@@ -3,6 +3,7 @@
 #include <stack>
 #include <iomanip>
 #include <algorithm>
+#include <unistd.h>
 
 //#define DEBUG 1
 //#define DEBUG_MOVES 1
@@ -63,21 +64,24 @@ void printMovesReverse(vector<Move> moves) {
 }
 
 void printBoard() {
-    cout << "    ";
+    cout << "     ";
     for (int i = 0; i < SIZE; i++) {
-        cout << setw(2) << i << " ";
+        cout << setw(3) << i << " ";
     }
     cout << endl;
-    cout << "    ";
+    cout << "     ";
     for (int i = 0; i < SIZE; i++) {
-        cout << "--" << " ";
+        cout << "---" << " ";
     }
     cout << endl;
 
     for (int i = 0; i < SIZE; i++) {
-        cout << setw(2) << i << "| ";
+        cout << setw(3) << i << "| ";
         for (int j = 0; j < SIZE; j++) {
-            cout << setw(2) << board[i][j] << " ";
+            if (board[i][j])
+                cout << setw(3) << board[i][j] << " ";
+            else
+                cout << "   " << " ";
         }
         cout << endl;
     }
@@ -463,7 +467,7 @@ int main() {
         state current_state = game.top();
         game.pop();
 
-        cin >> z;
+        usleep(150000);
 
         if (current_state.moves.empty()) {
             undoMove(current_state.previous_move);
@@ -499,7 +503,9 @@ int main() {
 #endif
 
         n--;
-        new_state.moves = find_possible_moves(current_state.moves, temp_move);
+        vector<Move> beka = find_possible_moves(current_state.moves, temp_move);
+        random_shuffle(beka.begin(), beka.end());
+        new_state.moves = beka;
         game.push(new_state);
 
         if (n <= K)
